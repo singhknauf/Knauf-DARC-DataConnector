@@ -1,0 +1,30 @@
+# Knauf DARC Data Connector Configuration Template
+# Copy this file to config.yaml and update the values
+
+# Fabric Lakehouse Connection Settings
+fabric:
+  sql_endpoint: "your-fabric-endpoint.datawarehouse.fabric.microsoft.com"
+  database: "your-database-name"
+  
+# Azure Authentication Settings (optional - can use environment variables instead)
+azure:
+  # Service Principal Authentication (optional)
+  # client_id: "your-client-id"
+  # client_secret: "your-client-secret" 
+  # tenant_id: "your-tenant-id"
+  
+  # Preferred authentication method: service_principal, cli, default, managed_identity
+  preferred_auth: "cli"
+
+# Logging Configuration
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  
+# Query Settings
+query:
+  # Default row limit for queries
+  default_limit: 1000
+  
+  # Timeout in seconds
+  timeout: 300
