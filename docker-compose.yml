@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  fabric-lakehouse-app:
+    build: .
+    container_name: fabric-lakehouse-connector
+    environment:
+      # Azure authentication environment variables
+      # Set these values in your deployment environment
+      - AZURE_CLIENT_ID=${AZURE_CLIENT_ID}
+      - AZURE_CLIENT_SECRET=${AZURE_CLIENT_SECRET}
+      - AZURE_TENANT_ID=${AZURE_TENANT_ID}
+      # Alternative: use Azure CLI authentication in container
+      # - AZURE_CLI_CREDENTIAL=true
+    volumes:
+      # Optional: mount Azure CLI credentials if using CLI auth
+      # - ~/.azure:/home/appuser/.azure:ro
+      # Optional: mount for logs or output files
+      - ./output:/app/output
+    restart: unless-stopped
+    # Optional: if you want to run it as a service that stays running
+    # command: ["python", "-c", "import time; time.sleep(3600)"]

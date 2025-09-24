@@ -1,0 +1,8 @@
+# System Requirements:
+# - OpenSSL 1.0, 1.1, or 3.0+ (installed via system package manager)
+# - ODBC Driver 18 for SQL Server
+
+# Python packages
+pyodbc==5.0.1
+pandas==2.1.4
+azure-identity==1.15.0

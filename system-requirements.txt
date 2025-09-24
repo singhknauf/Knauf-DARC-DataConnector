@@ -1,0 +1,27 @@
+# System Requirements for Fabric Lakehouse Application
+
+## OpenSSL
+- Version: 1.0, 1.1, or 3.0+
+- Installation:
+  - macOS: `brew install openssl@3`
+  - Ubuntu/Debian: `apt-get install libssl-dev`
+  - CentOS/RHEL: `yum install openssl-devel`
+  - Docker: Handled automatically in Dockerfile
+
+## ODBC Driver
+- Microsoft ODBC Driver 18 for SQL Server
+- Installation:
+  - macOS: Download from Microsoft
+  - Ubuntu/Debian: Via Microsoft repositories
+  - Docker: Handled automatically in Dockerfile
+
+## Current System Check
+To verify your current OpenSSL version:
+```bash
+openssl version
+```
+
+To verify ODBC drivers:
+```bash
+odbcinst -q -d
+```
