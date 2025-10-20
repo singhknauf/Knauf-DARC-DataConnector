@@ -108,6 +108,7 @@ connection_string = f"Driver={{ODBC Driver 18 for SQL Server}};Server={sql_endpo
 
 # Option 1: Get token from Azure CLI (recommended if you have Azure CLI)
 token = get_token_from_cli()
+# token = "" # add token generated from az login and az account get-access-token --resource=https://database.windows.net/
 
 # Option 2: Paste your token manually
 # token = get_token_manual()
