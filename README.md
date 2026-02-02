@@ -1,287 +1,255 @@
-# Microsoft Fabric Lakehouse SQL Connection Setup on macOS
+# Knauf DARC Data Connector
 
-This README documents the steps to resolve SSL provider errors when connecting to Microsoft Fabric Lakehouse using pyodbc on macOS.
+A Python package for connecting to Microsoft Fabric Lakehouse with flexible authentication methods.
 
-## Problem Statement
+## Features
 
-When trying to connect to Microsoft Fabric Lakehouse using pyodbc, you might encounter this error:
-```
-pyodbc.OperationalError: ('08001', '[08001] [Microsoft][ODBC Driver 17 for SQL Server]SSL Provider: [OpenSSL library could not be loaded, make sure OpenSSL 1.0, 1.1, or 3.0 is installed] (-1) (SQLDriverConnect)')
-```
+- **Flexible Azure Authentication**: Support for Service Principal, Azure CLI, Default Azure Credential, and Managed Identity
+- **Easy-to-use Connector**: Simple interface for Microsoft Fabric Lakehouse connections
+- **Pandas Integration**: Direct integration with pandas for data analysis
+- **Cross-platform Compatibility**: Works on Windows, macOS, and Linux
+- **Docker Support**: Containerized deployment options
+- **Structured Architecture**: Well-organized codebase following Python best practices
 
-This occurs even when OpenSSL is installed because the ODBC driver cannot locate the OpenSSL libraries.
+## Installation
 
-## Solution Overview
+### Prerequisites
 
-The solution involves:
-1. Installing Homebrew package manager
-2. Installing Microsoft ODBC Driver 18 for SQL Server
-3. Properly configuring OpenSSL
-4. Updating Python code to use the newer driver and set environment variables
+1. **ODBC Driver 18 for SQL Server**
+   - **Windows**: Download from [Microsoft](https://docs.microsoft.com/en-us/sql/connect/odbc/download-odbc-driver-for-sql-server)
+   - **macOS**: `brew install msodbcsql18`
+   - **Linux**: Follow [Microsoft's installation guide](https://docs.microsoft.com/en-us/sql/connect/odbc/linux-mac/installing-the-microsoft-odbc-driver-for-sql-server)
 
-## Step-by-Step Installation Commands
+2. **Python 3.8+**
 
-### 1. Install Homebrew (if not already installed)
+3. **Azure Authentication** (choose one):
+   - Azure CLI: `az login`
+   - Service Principal credentials via environment variables
+   - Managed Identity (when running on Azure)
 
-```bash
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-```
-
-### 2. Add Homebrew to PATH
-
-```bash
-echo >> /Users/$(whoami)/.zprofile
-echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> /Users/$(whoami)/.zprofile
-eval "$(/opt/homebrew/bin/brew shellenv)"
-```
-
-### 3. Install unixODBC (if not already installed)
+### Install Package
 
 ```bash
-brew install unixodbc
+# Clone the repository
+git clone https://github.com/singhknauf/Knauf-DARC-DataConnector.git
+cd Knauf-DARC-DataConnector
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Install the package in development mode
+pip install -e .
 ```
 
-### 4. Add Microsoft SQL Server ODBC Driver repository
+## Quick Start
 
-```bash
-brew tap microsoft/mssql-release https://github.com/Microsoft/homebrew-mssql-release
-```
+### Basic Usage
 
-### 5. Install Microsoft ODBC Driver 18 and SQL Tools
-
-```bash
-brew install microsoft/mssql-release/msodbcsql18 microsoft/mssql-release/mssql-tools18
-```
-
-**Note:** You'll need to accept the license terms by typing `YES` when prompted.
-
-### 6. Install and Link OpenSSL
-
-```bash
-brew install openssl
-brew link openssl@3
-```
-
-### 7. Verify ODBC Drivers Installation
-
-```bash
-odbcinst -q -d
-```
-
-Expected output should include:
-```
-[ODBC Driver 17 for SQL Server]
-[ODBC Driver 18 for SQL Server]
-```
-
-### 8. Check OpenSSL Installation
-
-```bash
-openssl version
-which openssl
-brew --prefix openssl
-```
-
-## Python Code Changes
-
-### Required Python Packages
-
-Make sure you have the following Python packages installed:
-```bash
-pip install pyodbc azure-identity
-```
-
-### Updated Python Code
-
-The key changes in your Python script (`fabric_lakehouse_sql2.py`):
-
-1. **Import os module and set environment variables:**
 ```python
-import os
-import struct
-from itertools import chain, repeat
+from knauf_darc_connector import FabricLakehouseConnector
 
-import pyodbc
+# Initialize connector
+connector = FabricLakehouseConnector(
+    sql_endpoint="your-endpoint.datawarehouse.fabric.microsoft.com",
+    database="your-database"
+)
+
+# Use context manager for automatic connection handling
+with connector:
+    # Execute query and get pandas DataFrame
+    df = connector.execute_query("SELECT TOP 100 * FROM dbo.orders")
+    print(df.head())
+    
+    # Or use the convenience method for table analysis
+    connector.get_table_info("orders", schema="dbo")
+```
+
+### Authentication Methods
+
+The connector automatically tries multiple authentication methods in order:
+
+#### 1. Service Principal (Environment Variables)
+```bash
+export AZURE_CLIENT_ID="your-client-id"
+export AZURE_CLIENT_SECRET="your-client-secret"
+export AZURE_TENANT_ID="your-tenant-id"
+```
+
+#### 2. Azure CLI
+```bash
+az login
+# The connector will automatically use these credentials
+```
+
+#### 3. Custom Credential
+```python
 from azure.identity import AzureCliCredential
+from knauf_darc_connector import FabricLakehouseConnector
 
-# Set OpenSSL environment variables for macOS compatibility
-os.environ['DYLD_LIBRARY_PATH'] = '/opt/homebrew/opt/openssl@3/lib:' + os.environ.get('DYLD_LIBRARY_PATH', '')
-os.environ['OPENSSL_ROOT_DIR'] = '/opt/homebrew/opt/openssl@3'
+# Use specific credential type
+credential = AzureCliCredential()
+connector = FabricLakehouseConnector(
+    sql_endpoint="your-endpoint",
+    database="your-database",
+    credential=credential
+)
 ```
 
-2. **Update connection string to use ODBC Driver 18:**
-```python
-connection_string = f"Driver={{ODBC Driver 18 for SQL Server}};Server={sql_endpoint},1433;Database={database};Encrypt=Yes;TrustServerCertificate=No"
+## Project Structure
+
+```
+Knauf-DARC-DataConnector/
+├── src/
+│   └── knauf_darc_connector/           # Main package
+│       ├── __init__.py
+│       ├── auth/                       # Authentication modules
+│       │   ├── __init__.py
+│       │   └── azure_auth.py
+│       └── connectors/                 # Database connectors
+│           ├── __init__.py
+│           └── fabric_connector.py
+├── scripts/                            # Example and utility scripts
+│   ├── flexible_auth_example.py        # Main usage example
+│   ├── pandas_example.py               # Pandas-focused example
+│   ├── build.sh                        # Build script
+│   └── legacy/                         # Original scripts (for reference)
+├── tests/                              # Unit tests
+│   ├── conftest.py
+│   └── test_auth.py
+├── docker/                             # Docker configuration
+│   ├── Dockerfile
+│   ├── Dockerfile.ubuntu
+│   ├── docker-compose.yml
+│   └── DOCKER_DEPLOYMENT.md
+├── config/                             # Configuration templates
+│   └── config.template.yaml
+├── docs/                               # Documentation
+├── requirements.txt                    # Python dependencies
+├── setup.py                           # Package setup
+├── .gitignore                         # Git ignore rules
+└── README.md                          # This file
 ```
 
-3. **Add error handling:**
-```python
-try:
-    connection = pyodbc.connect(connection_string, attrs_before=attrs_before)
-    cursor = connection.cursor()
-    cursor.execute("SELECT 1")
-    rows = cursor.fetchall()
-    print("Connection successful!")
-    print("Query result:", rows)
-    
-    cursor.close()
-    connection.close()
-    print("Connection closed successfully.")
-    
-except Exception as e:
-    print(f"Error connecting to database: {e}")
-    print("Make sure you have:")
-    print("1. ODBC Driver 18 for SQL Server installed")
-    print("2. OpenSSL properly configured")
-    print("3. Valid Azure credentials")
-```
+## Development
 
-## Testing the Connection
+### Setup Development Environment
 
-Run your Python script to test the connection:
 ```bash
-python fabric_lakehouse_sql2.py
+# Create virtual environment
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# Install development dependencies
+pip install -r requirements.txt
+pip install -e .[dev]  # Install with development extras
 ```
 
-Expected successful output:
-```
-Connection successful!
-Query result: [(1,)]
-Connection closed successfully.
-```
-
-## Alternative Method (Environment Variables in Terminal)
-
-If you prefer not to set environment variables in Python code, you can set them in your terminal session:
+### Running Examples
 
 ```bash
-export DYLD_LIBRARY_PATH="/opt/homebrew/opt/openssl@3/lib:$DYLD_LIBRARY_PATH"
-export OPENSSL_ROOT_DIR="/opt/homebrew/opt/openssl@3"
-python fabric_lakehouse_sql2.py
+# Run the flexible authentication example
+python scripts/flexible_auth_example.py
+
+# Run the pandas-focused example
+python scripts/pandas_example.py
+```
+
+### Running Tests
+
+```bash
+# Install test dependencies
+pip install pytest pytest-cov
+
+# Run tests
+pytest tests/
+
+# Run tests with coverage
+pytest tests/ --cov=src/knauf_darc_connector
+```
+
+### Code Quality
+
+```bash
+# Format code
+black src/ tests/ scripts/
+
+# Lint code
+flake8 src/ tests/ scripts/
+
+# Type checking
+mypy src/
+```
+
+## Docker Deployment
+
+For containerized deployments, see the comprehensive guide in `docker/DOCKER_DEPLOYMENT.md`.
+
+### Quick Docker Setup
+
+```bash
+cd docker/
+docker-compose up --build
+```
+
+## Configuration
+
+Copy the configuration template and customize:
+
+```bash
+cp config/config.template.yaml config/config.yaml
+# Edit config.yaml with your settings
 ```
 
 ## Troubleshooting
 
-### Common Issues and Solutions
+### Common Issues
 
-1. **"command not found: brew"**
-   - Make sure Homebrew is properly installed and added to PATH
-   - Restart your terminal or run: `eval "$(/opt/homebrew/bin/brew shellenv)"`
+1. **ODBC Driver Issues**: Ensure ODBC Driver 18 for SQL Server is installed
+2. **macOS OpenSSL**: The package automatically configures OpenSSL paths for Homebrew installations
+3. **Authentication Errors**: Check Azure credentials and permissions
+4. **Connection Timeouts**: Verify network access to Fabric workspace
 
-2. **"odbcinst: command not found"**
-   - Install unixODBC: `brew install unixodbc`
+### Debug Mode
 
-3. **Still getting SSL errors**
-   - Verify OpenSSL installation: `brew list openssl@3`
-   - Check if OpenSSL is linked: `brew link openssl@3`
-   - Ensure environment variables are set correctly
+Enable detailed logging by setting the environment variable:
 
-4. **Authentication errors**
-   - Make sure you're logged into Azure CLI: `az login`
-   - Verify your Azure credentials have access to the Fabric workspace
-
-## Files in This Project
-
-- `fabric_lakehouse_sql2.py` - Main script with fixes applied
-- `fabric_lakehouse_sql2_fixed.py` - Alternative version with same fixes
-- `README.md` - This documentation file
-
-## System Requirements
-
-- macOS (tested on Apple Silicon)
-- Python 3.x
-- Azure CLI (for authentication)
-- Active Microsoft Fabric workspace access
-
-## Dependencies
-
-- `pyodbc` - Python ODBC database connectivity
-- `azure-identity` - Azure authentication library
-- Microsoft ODBC Driver 18 for SQL Server
-- OpenSSL 3.x
-- unixODBC
-
----
-
-## Docker Installation (Required for Containerized Deployment)
-
-If you want to use the Docker containerized version of this application, you'll need to install Docker:
-
-### macOS Docker Installation
-
-#### Option 1: Docker Desktop (Recommended)
-1. Download Docker Desktop from: https://www.docker.com/products/docker-desktop/
-2. Install the .dmg file (requires admin privileges)
-3. Start Docker Desktop application
-
-#### Option 2: Via Homebrew (requires admin privileges)
 ```bash
-# Install Homebrew first (if not installed)
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-
-# Install Docker Desktop
-brew install --cask docker
+export PYTHONPATH="${PYTHONPATH}:./src"
+export LOG_LEVEL=DEBUG
 ```
 
-#### Option 3: Without Admin Privileges
-If you don't have admin access:
-- Contact your system administrator to install Docker
-- Use cloud-based development environments (GitHub Codespaces, Azure Cloud Shell)
-- Use the native Python version without Docker
+## Contributing
 
-### Verify Docker Installation
-```bash
-docker --version
-docker-compose --version
-```
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Make your changes following the project structure
+4. Add tests for new functionality
+5. Ensure all tests pass (`pytest tests/`)
+6. Submit a pull request
 
-### Docker Files Available
-- `Dockerfile` - Container definition (Debian-based)
-- `Dockerfile.ubuntu` - Alternative Ubuntu-based container
-- `docker-compose.yml` - Orchestration setup
-- `DOCKER_DEPLOYMENT.md` - Detailed deployment guide
+### Development Guidelines
 
-### Running Without Docker (Alternative)
+- Follow PEP 8 style guidelines
+- Add docstrings to all functions and classes
+- Include type hints where appropriate
+- Write unit tests for new features
+- Update documentation as needed
 
-If Docker installation is not possible, you can run the application directly:
+## License
 
-#### Prerequisites
-1. **Install Azure CLI** (required for authentication):
-   ```bash
-   # macOS
-   brew install azure-cli
-   
-   # Or download from: https://docs.microsoft.com/en-us/cli/azure/install-azure-cli
-   ```
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-2. **Login to Azure**:
-   ```bash
-   az login
-   ```
+## Support
 
-3. **Run the Python application**:
-   ```bash
-   python fabric_lakehouse_pandas.py
-   ```
+For support and questions:
+- Create an issue on GitHub
+- Contact the DARC team at darc@knauf.com
 
-#### Troubleshooting Docker Build Issues
+## Changelog
 
-If you encounter Docker build errors:
-
-1. **Ensure Docker Desktop is running** (check menu bar for Docker whale icon)
-
-2. **Try the Ubuntu-based Dockerfile**:
-   ```bash
-   docker build -f Dockerfile.ubuntu -t fabric-lakehouse-app .
-   ```
-
-3. **Check Docker version**:
-   ```bash
-   docker --version
-   docker-compose --version
-   ```
-
----
-
-**Last Updated:** September 24, 2025  
-**Tested On:** macOS with Apple Silicon (M1/M2)
+### v0.1.0
+- Initial release
+- Flexible Azure authentication
+- Fabric Lakehouse connector
+- Docker support
+- Comprehensive test suite
